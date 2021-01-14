@@ -5,21 +5,16 @@ Implements a Proxy model as a table in SQLite database (using SQLAlchemy)
 import os
 import socket
 import logging
-import threading
 from datetime import datetime
 
 import requests
 import requests.exceptions
-from sqlalchemy import create_engine, Column, String, Integer, Float, \
+from sqlalchemy import Column, String, Integer, Float, \
                        DateTime, Boolean, UniqueConstraint
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.ext.declarative import declarative_base
 
+from .db import Base
 from .geoip import GeoipDB
 
-
-# Path to SQLAlchemy database file
-PROXY_DB_PATH = os.environ.get('PROXY_DB_PATH', 'tmp/proxy.db')
 
 # URL to check proxy
 TRY_URL = os.environ.get('TRY_URL', 'http://example.org/')
@@ -29,32 +24,6 @@ CHECK_TIMEOUT = 3.0
 
 # Coef to modify proxy score (see Proxy.score_up and Proxy.score_down)
 SCORE_COEF = 0.25
-
-
-engine = create_engine(f'sqlite:///{PROXY_DB_PATH}')
-Session = sessionmaker(bind=engine)
-Base = declarative_base()
-
-
-class SessionThreadPool:
-    """
-    It is a pool of sessions for each theard. It contains the method 'get'
-    that returns a session of the current thread or create a new one if it
-    does not exist yet.
-    """
-
-    def __init__(self):
-        self._pool = {}
-
-    def get(self):
-        """
-        Returns the session of the current thread. It creates a new session
-        if it has not been created before.
-        """
-        tid = threading.get_ident()
-        if tid not in self._pool:
-            self._pool[tid] = Session()
-        return self._pool[tid]
 
 
 class Proxy(Base):
@@ -81,6 +50,12 @@ class Proxy(Base):
 
     def __repr__(self):
         return f"{self.host}:{self.port}"
+
+    def __eq__(self, other):
+        return self.host == other.host and self.port == other.port
+
+    def __hash__(self):
+        return hash((self.host, self.port))
 
     def as_dict(self):
         """
@@ -121,7 +96,7 @@ class Proxy(Base):
 
     def exists(self, session):
         """
-        Returns true of such proxy exists in the table.
+        Returns true if such proxy exists in the table.
         """
         return self.__class__.get(session, self.host, self.port) is not None
 
@@ -187,7 +162,3 @@ class Proxy(Base):
                 requests.exceptions.ConnectionError,
                 requests.exceptions.ReadTimeout) as exc:
             return False
-
-
-# Encure the table for Proxy in the database
-Base.metadata.create_all(engine)

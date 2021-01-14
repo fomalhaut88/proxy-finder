@@ -3,3 +3,7 @@ export TRY_URL="https://example.org/"
 export PROXY_DB_PATH="tmp/proxy.db"
 export GEOIP_DB_PATH="tmp/geoip.db"
 export PROXY_SEARCH_THREADS=100
+export GEOIP_DB_DOWNLOAD_URL=https://download.db-ip.com/free/dbip-city-lite-2020-12.csv.gz
+export NODES_INIT_PATH=nodes-init.txt
+export NET_BLACKLIST=
+export INSTANCE_URL=

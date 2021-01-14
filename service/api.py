@@ -5,9 +5,11 @@ Flask API for the service.
 from flask import Flask, jsonify, redirect, url_for, request
 
 from .version import __version__
-from .proxy import Proxy, SessionThreadPool
+from .db import SessionThreadPool
+from .models import Proxy, Node
 from .log import init_logging
 from .geoip import GeoipDB
+from .utils import ensure_trailing_slash, is_valid_url
 
 
 init_logging()
@@ -97,3 +99,26 @@ def licenses():
         geo="Geo data is taken from https://db-ip.com/ under " \
             "Creative Commons Attribution 4.0 International License",
     )
+
+
+@app.route('/nodes', methods=('GET', 'POST'))
+def nodes():
+    """
+    Returns list of nodes. In case of method POST it is necessary to specify
+    URL where the proxy-finder instance is deployed, to make the service store
+    it and request for proxy exchange.
+    """
+    session = session_pool.get()
+
+    if request.method == 'POST':
+        url = request.form.get('url', '')
+        if is_valid_url(url):
+            node = Node(url=ensure_trailing_slash(url))
+            if not node.exists(session):
+                node.create(session)
+        else:
+            return 'Invalid URL', 403
+
+    result = Node.list_active(session)
+    result = map(Node.as_dict, result)
+    return jsonify(result=list(result))

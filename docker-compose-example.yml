@@ -13,6 +13,8 @@ services:
       - TRY_URL=http://example.org/
       - PROXY_DB_PATH=tmp/proxy.db
       - GEOIP_DB_PATH=tmp/geoip.db
+      - GEOIP_DB_DOWNLOAD_URL=https://download.db-ip.com/free/dbip-city-lite-2020-12.csv.gz
+      - NODES_INIT_PATH=nodes-init.txt
     volumes:
       - ./tmp:/code/tmp
 
@@ -27,5 +29,9 @@ services:
       - PROXY_DB_PATH=tmp/proxy.db
       - GEOIP_DB_PATH=tmp/geoip.db
       - PROXY_SEARCH_THREADS=100
+      - NET_BLACKLIST=
+      - INSTANCE_URL=
     volumes:
       - ./tmp:/code/tmp
+    depends_on:
+      - api

@@ -12,15 +12,16 @@ import threading
 from queue import Queue
 from random import randint, choice
 
-from .proxy import Proxy
+from .models import Proxy
 
 
 class ProxySearcher:
     # Ports list to search for proxies
     ports = (8080, 3128)
 
-    def __init__(self, threads_num):
+    def __init__(self, threads_num, net_blacklist=None):
         self._threads_num = threads_num
+        self._net_blacklist = net_blacklist
 
     def search(self, count=None):
         """
@@ -64,10 +65,17 @@ class ProxySearcher:
     def _find_target(self, queue, stop_event):
         while not stop_event.is_set():
             proxy = self._get_random_proxy()
-            if proxy.check():
-                queue.put(proxy)
+            if not self._in_blacklist(proxy.host):
+                if proxy.check():
+                    queue.put(proxy)
 
     def _get_random_proxy(self):
         host = ".".join(str(randint(0, 255)) for _ in range(4))
         port = choice(self.ports)
         return Proxy(host=host, port=port)
+
+    def _in_blacklist(self, host):
+        if self._net_blacklist is not None:
+            return host in self._net_blacklist
+        else:
+            return False

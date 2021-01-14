@@ -22,6 +22,9 @@ Use example:
 import os
 import re
 import csv
+import gzip
+
+import requests
 
 from . import utils
 
@@ -88,18 +91,20 @@ class GeoipDB:
         return idx
 
 
-def prepare_geoip_db(csv_path):
+def prepare_geoip_db(db_ip_url):
     """
-    Transforms CSV geo database to binary format that can be successfully
-    interpreted by GeoipDB.
+    Downloads IP database and transforms the CSV data to binary format
+    that can be successfully interpreted by GeoipDB.
 
     To run this function use manage.py:
 
-        python manage.py prepare_geoip_db --path /path/to/csv/db.csv
+        python manage.py prepare_geoip_db --url https://download.db-ip.com/free/dbip-city-lite-2020-12.csv.gz
     """
     with open(GEOIP_DB_PATH, 'wb') as geoip_db_file:
-        with open(csv_path) as csv_file:
-            for row in csv.reader(csv_file):
+        with requests.get(db_ip_url, stream=True) as response:
+            fileobj = gzip.GzipFile(fileobj=response.raw, mode='rb')
+            reader = csv.reader(map(bytes.decode, fileobj))
+            for row in reader:
                 # Use IPv4 only
                 if IP_V4_PATTERN.match(row[0]):
                     row[6] = float(row[6])
