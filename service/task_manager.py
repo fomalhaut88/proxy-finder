@@ -17,6 +17,7 @@ Example:
 """
 
 import logging
+import traceback
 from time import sleep
 
 import multiprocessing as mp
@@ -73,18 +74,27 @@ class TaskManager:
         logging.debug(f"Task '{task_cls.__name__}' registered")
         return task_cls
 
-    def run(self):
+    def run(self, restart=False):
         """
         Creates processes for the registered tasks and runs them.
         """
         logging.info("Run task manager")
         processes = [
-            mp.Process(target=self._run_task, args=(task_cls,))
+            mp.Process(target=self._run_task, args=(task_cls, restart))
             for task_cls in self._tasl_cls_list
         ]
         list(map(mp.Process.start, processes))
         list(map(mp.Process.join, processes))
 
-    def _run_task(self, task_cls):
+    def _run_task(self, task_cls, restart):
         logging.info(f"Run task '{task_cls.__name__}'")
-        task_cls().run()
+        if restart:
+            while True:
+                try:
+                    task_cls().run()
+                except Exception:
+                    logging.error(traceback.format_exc())
+                    logging.info(f"Restart task '{task_cls.__name__}'")
+                    sleep(10.0)
+        else:
+            task_cls().run()
